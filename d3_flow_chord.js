@@ -555,7 +555,8 @@ function d3FlowChord() {
 
     config = config || {};
     config.element = config.element || 'body';
-    config.now = config.now || years[0];
+	config.now = "now" in config ? config.now : years[0];
+	config.watchKeypress = "watchKeypress" in config ? config.watchKeypress : true;
 
     var form = d3.select(config.element).append('form');
 
@@ -585,17 +586,19 @@ function d3FlowChord() {
       .text(function(d) { return ""+d+"–" + (d+5); });
 
     // keyboard control
-    d3.select(document.body).on('keypress', function() {
-      var idx = d3.event.which - 49;
-      var y = years[idx];
-      if (y) {
-        year.selectAll('input').each(function(d) {
-          if (d === y) {
-            d3.select(this).on('click')(d);
-          }
-        });
-      }
-    });
+	if ( config.watchKeypress ) {
+		d3.select(document.body).on('keypress', function() {
+		  var idx = d3.event.which - 49;
+		  var y = years[idx];
+		  if (y) {
+			year.selectAll('input').each(function(d) {
+			  if (d === y) {
+				d3.select(this).on('click')(d);
+			  }
+			});
+		  }
+		});
+	}
   };
 
 // }}}
@@ -641,6 +644,7 @@ function d3FlowChord() {
 
     config.maxRegionsOpen = "maxRegionsOpen" in config ? config.maxRegionsOpen : 2;
     config.infoPopupDelay = "infoPopupDelay" in config ? config.infoPopupDelay : 300;
+	config.watchKeypress = "watchKeypress" in config ? config.watchKeypress : true;
 
 
     var colors = d3.scale.category10().domain(data.regions);
