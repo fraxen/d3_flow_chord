@@ -19,22 +19,22 @@
     config.now = config.now || Object.keys(data.matrix)[0];
 
     // geometry
-    config.width = config.width || 1100;
-    config.height = config.height || 1100;
-    config.margin = config.margin || 125;
-    config.outerRadius = config.outerRadius || (Math.min(config.width, config.height) / 2 - config.margin);
-    config.arcWidth = config.arcWidth || 24;
-    config.innerRadius = config.innerRadius || (config.outerRadius - config.arcWidth);
-    config.arcPadding = config.arcPadding || 0.005;
-    config.sourcePadding = config.sourcePadding || 3;
-    config.targetPadding = config.targetPadding || 20;
-    config.labelPadding = config.labelPadding || 10;
-    config.labelRadius = config.labelRadius || (config.outerRadius + config.labelPadding);
+    config.width = "width" in config ? config.width : 1100;
+    config.height = "height" in config ? config.height : 1100;
+    config.margin = "margin" in config ? config.margin : 125;
+    config.outerRadius = "outerRadius" in config ? config.outerRadius : (Math.min(config.width, config.height) / 2 - config.margin);
+    config.arcWidth = "arcWidth" in config ? config.arcWidth : 24;
+    config.innerRadius = "innerRadius" in config ? config.innerRadius : (config.outerRadius - config.arcWidth);
+    config.arcPadding = "arcPadding" in config ? config.arcPadding : 0.005;
+    config.sourcePadding = "sourcePadding" in config ? config.sourcePadding : 3;
+    config.targetPadding = "targetPadding" in config ? config.targetPadding : 20;
+    config.labelPadding = "labelPadding" in config ? config.labelPadding : 10;
+    config.labelRadius = "labelRadius" in config ? config.labelRadius : (config.outerRadius + config.labelPadding);
 
     // animation
     var aLittleBit = Math.PI / 100000;
-    config.animationDuration = config.animationDuration || 1000;
-    config.initialAngle = config.initialAngle || {};
+    config.animationDuration = "animationDuration" in config ? config.animationDuration : 1000;
+    config.initialAngle = "initialAngle" in config ? config.initialAngle : {};
     config.initialAngle.arc = config.initialAngle.arc || { startAngle: 0, endAngle: aLittleBit };
     config.initialAngle.chord = config.initialAngle.chord || { source: config.initialAngle.arc, target: config.initialAngle.arc };
 
@@ -42,11 +42,11 @@
     config.layout = config.layout || {};
     config.layout.sortSubgroups = config.layout.sortSubgroups || d3.descending;
     config.layout.sortChords = config.layout.sortChords || d3.descending;
-    config.layout.threshold = config.layout.threshold || 1000;
-    config.layout.labelThreshold = config.layout.labelThreshold || 100000;
+    config.layout.threshold = "threshold" in config.layout ? config.layout.threshold : 1000;
+    config.layout.labelThreshold = "labelThreshold" in config.layout ? config.layout.labelThreshold : 100000;
 
-    config.maxRegionsOpen = config.maxRegionsOpen || 2;
-    config.infoPopupDelay = config.infoPopupDelay || 300;
+    config.maxRegionsOpen = "maxRegionsOpen" in config ? config.maxRegionsOpen : 2;
+    config.infoPopupDelay = "infoPopupDelay" in config ? config.infoPopupDelay : 300;
 
 
     var colors = d3.scale.category10().domain(data.regions);
