@@ -8,6 +8,11 @@
  * Licensed under the MIT license.
  */
 
+/* global d3,d3FlowChord,document,window */
+/* jshint latedef:false */
+/* jshint unused:false */
+/* jshint -W082 */
+
 // {{{ COUNTRYMERGE
 
 // Merge country indices. Seperated for testing purpose.
@@ -129,10 +134,10 @@ function d3FlowChord() {
       // Compute the start and end angle for each group and subgroup.
       // Note: Opera has a bug reordering object literal properties!
       x = 0, i = -1; while (++i < n) {
-        var inflow = 0;
-        var outflow = 0;
-
-        var di = groupIndex[i];
+        var inflow = 0,
+			outflow = 0,
+			lastX0 = 0,
+			di = groupIndex[i];
 
 		function flowTargets() {
 			// targets
@@ -174,11 +179,11 @@ function d3FlowChord() {
 		}
 		if ( outFlowfirst ) {
 			flowSources();
-			var lastX0 = x0;
+			lastX0 = x0;
 			flowTargets();
 		} else {
 			flowTargets();
-			var lastX0 = x0;
+			lastX0 = x0;
 			flowSources();
 		}
 
@@ -204,7 +209,7 @@ function d3FlowChord() {
               target = subgroups['target' + '-' + j + "-" + i];
           if (i === j) {
             if (threshold === null || source.value > threshold) {
-              var target = subgroups['target' + '-' + i + "-" + j];
+              target = subgroups['target' + '-' + i + "-" + j];
               chords.push({
                 id: 'source-' + indices[i] + "-" + indices[j],
                 source: {
@@ -251,7 +256,7 @@ function d3FlowChord() {
                 }
               });
             }
-            var source = subgroups['source' + '-' + j + "-" + i],
+            source = subgroups['source' + '-' + j + "-" + i],
                 target = subgroups['target' + '-' + i + "-" + j];
             if (threshold === null || source.value > threshold) {
               chords.push({
@@ -280,7 +285,7 @@ function d3FlowChord() {
         }
       }
 
-      if (sortChords) resort();
+      if (sortChords) { resort(); }
     }
 
     function resort() {
@@ -290,7 +295,7 @@ function d3FlowChord() {
     }
 
     chord.data = function(x) {
-      if (!arguments.length) return data;
+      if (!arguments.length) { return data; }
       data = x;
       indices = data.regions.slice();
       n = indices.length;
@@ -299,14 +304,14 @@ function d3FlowChord() {
     };
 
     chord.year = function(x) {
-      if (!arguments.length) return year;
+      if (!arguments.length) { return year; }
       year = x;
       chords = groups = null;
       return chord;
     };
 
     chord.countries = function(x) {
-      if (!arguments.length) return countries;
+      if (!arguments.length) { return countries; }
       countries = x;
       indices = flowObj.countrymerge(data, countries);
       n = indices.length;
@@ -315,54 +320,54 @@ function d3FlowChord() {
     };
 
 	chord.outFlowfirst = function(x) {
-      if (!arguments.length) return outFlowfirst;
+      if (!arguments.length) { return outFlowfirst; }
       outFlowfirst = x;
       chords = groups = null;
       return chord;
-	}
+	};
 
     chord.padding = function(x) {
-      if (!arguments.length) return padding;
+      if (!arguments.length) { return padding; }
       padding = x;
       chords = groups = null;
       return chord;
     };
 
     chord.threshold = function(x) {
-      if (!arguments.length) return threshold;
+      if (!arguments.length) { return threshold; }
       threshold = x;
       chords = groups = null;
       return chord;
     };
 
     chord.sortGroups = function(x) {
-      if (!arguments.length) return sortGroups;
+      if (!arguments.length) { return sortGroups; }
       sortGroups = x;
       chords = groups = null;
       return chord;
     };
 
     chord.sortSubgroups = function(x) {
-      if (!arguments.length) return sortSubgroups;
+      if (!arguments.length) { return sortSubgroups; }
       sortSubgroups = x;
       chords = null;
       return chord;
     };
 
     chord.sortChords = function(x) {
-      if (!arguments.length) return sortChords;
+      if (!arguments.length) { return sortChords; }
       sortChords = x;
-      if (chords) resort();
+      if (chords) { resort(); }
       return chord;
     };
 
     chord.chords = function() {
-      if (!chords) relayout();
+      if (!chords) { relayout(); }
       return chords;
     };
 
     chord.groups = function() {
-      if (!groups) relayout();
+      if (!groups) { relayout(); }
       return groups;
     };
 
@@ -389,7 +394,6 @@ function d3FlowChord() {
     return d.target;
   }
   // import "../math/trigonometry";
-  var π = Math.PI;
   // import "arc";
   var d3_svg_arcOffset = -π / 2;
   function d3_svg_arcStartAngle(d) {
@@ -426,19 +430,19 @@ function d3FlowChord() {
 
       var ccp = cubic_control_points(s, t, s.r * 0.618);
 
-      return "M" + s.p0
-        + arc(s.r, s.p1, s.a1 - s.a0)
-        + cubic_curve(ccp.cps1, ccp.cpt0, t.p0)
-        + arc(t.r, t.p1, t.a1 - t.a0)
-        + cubic_curve(ccp.cpt1, ccp.cps0, s.p0)
-        + "Z";
+      return "M" + s.p0 +
+        arc(s.r, s.p1, s.a1 - s.a0) + 
+        cubic_curve(ccp.cps1, ccp.cpt0, t.p0) +
+        arc(t.r, t.p1, t.a1 - t.a0) +
+        cubic_curve(ccp.cpt1, ccp.cps0, s.p0) +
+        "Z";
     }
 
     function cubic_control_points(s, t, factor) {
-      cps0 = [factor * Math.cos(s.a0), factor * Math.sin(s.a0)];
-      cps1 = [factor * Math.cos(s.a1), factor * Math.sin(s.a1)];
-      cpt0 = [factor * Math.cos(t.a0), factor * Math.sin(t.a0)];
-      cpt1 = [factor * Math.cos(t.a1), factor * Math.sin(t.a1)];
+      var cps0 = [factor * Math.cos(s.a0), factor * Math.sin(s.a0)],
+		  cps1 = [factor * Math.cos(s.a1), factor * Math.sin(s.a1)],
+		  cpt0 = [factor * Math.cos(t.a0), factor * Math.sin(t.a0)],
+		  cpt1 = [factor * Math.cos(t.a1), factor * Math.sin(t.a1)];
       return {
         cps0: cps0, 
         cps1: cps1, 
@@ -448,16 +452,16 @@ function d3FlowChord() {
     }
 
     function subgroup(self, f, d, i, target) {
-      var subgroup = f.call(self, d, i),
-          r = radius.call(self, subgroup, i),
-          a0 = startAngle.call(self, subgroup, i) + d3_svg_arcOffset,
-          a1 = endAngle.call(self, subgroup, i) + d3_svg_arcOffset;
+      var subgrp = f.call(self, d, i),
+          r = radius.call(self, subgrp, i),
+          a0 = startAngle.call(self, subgrp, i) + d3_svg_arcOffset,
+          a1 = endAngle.call(self, subgrp, i) + d3_svg_arcOffset;
       
       if (target) {
-        var d = targetPadding.call(self, subgroup, i) || 0;
+        d = targetPadding.call(self, subgrp, i) || 0;
         r = r - d;
       } else {
-        var d = sourcePadding.call(self, subgroup, i) || 0;
+        d = sourcePadding.call(self, subgrp, i) || 0;
         r = r - d;
       }
 
@@ -471,11 +475,11 @@ function d3FlowChord() {
     }
 
     function equals(a, b) {
-      return a.a0 == b.a0 && a.a1 == b.a1;
+      return a.a0 === b.a0 && a.a1 === b.a1;
     }
 
     function arc(r, p, a) {
-      return "A" + r + "," + r + " 0 " + +(a > π) + ",1 " + p;
+      return "A" + r + "," + r + " 0 " + (+(a > π)) + ",1 " + p;
     }
 
     function curve(r0, p0, r1, p1) {
@@ -487,43 +491,43 @@ function d3FlowChord() {
     }
 
     chord.radius = function(v) {
-      if (!arguments.length) return radius;
+      if (!arguments.length) { return radius; }
       radius = d3_functor(v);
       return chord;
     };
 
     // null2
     chord.sourcePadding = function(v) {
-      if (!arguments.length) return sourcePadding;
+      if (!arguments.length) { return sourcePadding; }
       sourcePadding = d3_functor(v);
       return chord;
     };
     chord.targetPadding = function(v) {
-      if (!arguments.length) return targetPadding;
+      if (!arguments.length) { return targetPadding; }
       targetPadding = d3_functor(v);
       return chord;
     };
 
     chord.source = function(v) {
-      if (!arguments.length) return source;
+      if (!arguments.length) { return source; }
       source = d3_functor(v);
       return chord;
     };
 
     chord.target = function(v) {
-      if (!arguments.length) return target;
+      if (!arguments.length) { return target; }
       target = d3_functor(v);
       return chord;
     };
 
     chord.startAngle = function(v) {
-      if (!arguments.length) return startAngle;
+      if (!arguments.length) { return startAngle; }
       startAngle = d3_functor(v);
       return chord;
     };
 
     chord.endAngle = function(v) {
-      if (!arguments.length) return endAngle;
+      if (!arguments.length) { return endAngle; }
       endAngle = d3_functor(v);
       return chord;
     };
@@ -599,8 +603,6 @@ function d3FlowChord() {
 // {{{ CHART
 
 // Initialize diagram
-  var π = Math.PI;
-
   this.chart = function(data, config) {
     data = data || { regions: [], names: [], matrix: [] };
 
@@ -674,6 +676,9 @@ function d3FlowChord() {
     }
 
     function formatNumber(nStr, seperator) {
+		var x = 0,
+			x1 = 0,
+			x2 = 0;
       seperator = seperator || ',';
 
       nStr += '';
@@ -901,7 +906,7 @@ function d3FlowChord() {
     function rememberTheChords() {
       previous.chords = layout.chords().reduce(function(sum, d) {
         sum[d.source.id] = sum[d.source.id] || {};
-        sum[d.source.id][d.target.id] = d
+        sum[d.source.id][d.target.id] = d;
         return sum;
       }, {});
     }
@@ -1071,13 +1076,13 @@ function d3FlowChord() {
         .append("g")
         .attr('class', 'label');
       groupTextGroup
-        .filter(function(d) {return d.id !== d.region})
+        .filter(function(d) { return d.id !== d.region; })
         .transition()
         .duration(config.animationDuration)
         .attrTween("transform", function(d) {
           var i = d3.interpolate(previous.groups[d.id] || previous.groups[d.region] || meltPreviousGroupArc(d) || { angle: 0 }, d);
           return function (t) {
-            var t = labelPosition(i(t).angle);
+            t = labelPosition(i(t).angle);
             return 'translate(' + t.x + ' ' + t.y + ') rotate(' + t.r + ')';
           };
         });
@@ -1091,13 +1096,13 @@ function d3FlowChord() {
             return;
           }
 
-          var region = layout.groups().filter(function(g) { return g.id === d.region });
+          var region = layout.groups().filter(function(g) { return g.id === d.region; });
           region = region && region[0];
           var angle = region && (region.startAngle + (region.endAngle - region.startAngle) / 2);
           angle = angle || 0;
           var i = d3.interpolate(d, { angle: angle });
           return function (t) {
-            var t = labelPosition(i(t).angle);
+            t = labelPosition(i(t).angle);
             return 'translate(' + t.x + ' ' + t.y + ') rotate(' + t.r + ')';
           };
         })
@@ -1109,7 +1114,7 @@ function d3FlowChord() {
       var groupText = groupTextGroup.selectAll('text')
         .data(function(d) { return [d]; });
       groupText.enter()
-        .append("text")
+        .append("text");
       groupText
         .classed('region', function(d) {
           return d.id === d.region;
@@ -1139,7 +1144,7 @@ function d3FlowChord() {
 
       // path for text-on-path
       var groupTextPathPath = group
-        .filter(function(d) {return d.id === d.region})
+        .filter(function(d) { return d.id === d.region; })
         .selectAll('.group-textpath-arc')
         .data(function(d) { return [d]; });
       groupTextPathPath.enter()
@@ -1166,12 +1171,12 @@ function d3FlowChord() {
 
       // text on path
       var groupTextPath = groupText
-        .filter(function(d) {return d.id === d.region})
+        .filter(function(d) { return d.id === d.region; })
         .selectAll('textPath')
         .data(function(d) { return [d]; });
       groupTextPath
         .enter()
-        .append("textPath")
+        .append("textPath");
       groupTextPath
         .text(function(d) { return data.names[d.id]; })
         .attr('startOffset', function(d) {
@@ -1249,6 +1254,6 @@ function d3FlowChord() {
       data: data
     };
   };
-};
+}
 
 // }}}
