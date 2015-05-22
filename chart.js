@@ -44,6 +44,7 @@
     config.layout.sortChords = config.layout.sortChords || d3.descending;
     config.layout.threshold = "threshold" in config.layout ? config.layout.threshold : 1000;
     config.layout.labelThreshold = "labelThreshold" in config.layout ? config.layout.labelThreshold : 100000;
+	config.layout.outFlowfirst = "outFlowfirst" in config.layout ? config.layout.outFlowfirst : false;
 
     config.maxRegionsOpen = "maxRegionsOpen" in config ? config.maxRegionsOpen : 2;
     config.infoPopupDelay = "infoPopupDelay" in config ? config.infoPopupDelay : 300;
@@ -118,6 +119,7 @@
     var layout = Globalmigration.layout()
         .padding(config.arcPadding)
         .threshold(config.layout.threshold)
+		.outFlowfirst(config.layout.outFlowfirst)
         .data(data)
         .year(config.now);
 

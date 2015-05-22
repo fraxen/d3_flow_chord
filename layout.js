@@ -23,6 +23,7 @@
         matrix,
         indices,
         countries,
+		outFlowfirst = false,
         year,
         n,
         padding = 0,
@@ -30,7 +31,7 @@
         sortGroups,
         sortSubgroups,
         sortChords;
-
+	
     // get region from country index
     function region(index) {
       var r = 0;
@@ -109,41 +110,55 @@
         var outflow = 0;
 
         var di = groupIndex[i];
-        // targets
-        x0 = x, j = -1; while (++j < n) {
-          var dj = subgroupIndex[di].target[j],
-              v = matrix[indices[dj]][indices[di]],
-              a0 = x,
-              d = v * k;
-          x += d;
-          subgroups['target' + '-' + di + "-" + dj] = {
-            originalIndex: indices[dj],
-            index: di,
-            subindex: dj,
-            startAngle: a0,
-            dAngle: v * k,
-            value: v
-          };
-          inflow += v;
-        }
-        var lastX0 = x0;
-        // sources
-        x0 = x, j = -1; while (++j < n) {
-          var dj = subgroupIndex[di].source[j],
-              v = matrix[indices[di]][indices[dj]],
-              a0 = x,
-              d = v * k;
-          x += d;
-          subgroups['source' + '-' + di + "-" + dj] = {
-            originalIndex: indices[di],
-            index: di,
-            subindex: dj,
-            startAngle: a0,
-            dAngle: v * k,
-            value: v
-          };
-          outflow += v;
-        }
+
+		function flowTargets() {
+			// targets
+			x0 = x, j = -1; while (++j < n) {
+			  var dj = subgroupIndex[di].target[j],
+				  v = matrix[indices[dj]][indices[di]],
+				  a0 = x,
+				  d = v * k;
+			  x += d;
+			  subgroups['target' + '-' + di + "-" + dj] = {
+				originalIndex: indices[dj],
+				index: di,
+				subindex: dj,
+				startAngle: a0,
+				dAngle: v * k,
+				value: v
+			  };
+			  inflow += v;
+			}
+		}
+		function flowSources() {
+			// sources
+			x0 = x, j = -1; while (++j < n) {
+			  var dj = subgroupIndex[di].source[j],
+				  v = matrix[indices[di]][indices[dj]],
+				  a0 = x,
+				  d = v * k;
+			  x += d;
+			  subgroups['source' + '-' + di + "-" + dj] = {
+				originalIndex: indices[di],
+				index: di,
+				subindex: dj,
+				startAngle: a0,
+				dAngle: v * k,
+				value: v
+			  };
+			  outflow += v;
+			}
+		}
+		if ( outFlowfirst ) {
+			flowSources();
+			var lastX0 = x0;
+			flowTargets();
+		} else {
+			flowTargets();
+			var lastX0 = x0;
+			flowSources();
+		}
+
         
         groups[di] = {
           id: indices[di],
@@ -275,6 +290,13 @@
       chords = groups = null;
       return chord;
     };
+
+	chord.outFlowfirst = function(x) {
+      if (!arguments.length) return outFlowfirst;
+      outFlowfirst = x;
+      chords = groups = null;
+      return chord;
+	}
 
     chord.padding = function(x) {
       if (!arguments.length) return padding;
