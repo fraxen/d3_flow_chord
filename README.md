@@ -42,4 +42,5 @@ See the original repo on how to format the data structure.
 ## License
 Copyright (c) 2015 Hugo Ahlenius, http://nordpil.com
 Copyright (c) 2013 null2 GmbH Berlin  
+
 This work is licensed under a MIT license
