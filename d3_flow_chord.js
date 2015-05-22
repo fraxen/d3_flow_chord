@@ -1,16 +1,607 @@
 /*
- * globalmigration
- * https://github.com/null2/globalmigration
+ * d3_flow_chord
+ * https://github.com/fraxen/d3_flow_chord
+ * Copyright (c) 2015 Hugo Ahlenius, http://nordpil.com
  *
  * Copyright (c) 2013 null2 GmbH Berlin
+ * https://github.com/null2/globalmigration
  * Licensed under the MIT license.
  */
 
-// Initialize diagram
-(function(scope) {
+// {{{ COUNTRYMERGE
+
+// Merge country indices. Seperated for testing purpose.
+function d3FlowChord() {
+  this.countrymerge = function(data, countries) {
+    return data.regions.reduce(function(memo, region, i) {
+      if (countries.indexOf(region) === -1) {
+        memo.push(region);
+      } else {
+        for (var idx = region + 1; idx < (data.regions[i + 1] || data.names.length); idx++) {
+          memo.push(idx);
+        }
+      }
+
+      return memo;
+    }, []);
+  };
+
+// }}}
+
+// {{{ LAYOUT
+
+// Basically a d3.layout.chord, but with
+// Depends on countrymerge.js
+  // from d3/layout/chord.js
+
+  // import "../arrays/range";
+  // import "../math/trigonometry";
   var π = Math.PI;
 
-  scope.chart = function(data, config) {
+  this.layout = function(flowObj) {
+    var chord = {},
+        chords,
+        groups,
+        data,
+        matrix,
+        indices,
+        countries,
+		outFlowfirst = false,
+        year,
+        n,
+        padding = 0,
+        threshold = null,
+        sortGroups,
+        sortSubgroups,
+        sortChords;
+	
+    // get region from country index
+    function region(index) {
+      var r = 0;
+      for (var i = 0; i < data.regions.length; i++) {
+        if (data.regions[i] > index) {
+          break;
+        }
+        r = i;
+      }
+      return data.regions[r];
+    }
+
+    function relayout() {
+      var subgroups = {},
+          groupSums = [],
+          groupIndex = d3.range(n),
+          subgroupIndex = [],
+          k,
+          x,
+          x0,
+          i,
+          j;
+
+      data = data || { matrix: {}, names: [], regions: []};
+      year = year || Object.keys(data.matrix)[0];
+      matrix = year && data.matrix[year] || [];
+
+      chords = [];
+      groups = [];
+
+      // Compute the sum.
+      k = 0, i = -1; while (++i < n) {
+        x = 0, j = -1; while (++j < n) {
+          x += matrix[indices[i]][indices[j]];
+          x += matrix[indices[j]][indices[i]];
+          // if (x === 0) {
+          //   x = 1;
+          // }
+        }
+        groupSums.push(x);
+        subgroupIndex.push({source: d3.range(n), target: d3.range(n)});
+        k += x;
+      }
+
+      // Sort groups…
+      if (sortGroups) {
+        groupIndex.sort(function(a, b) {
+          return sortGroups(groupSums[a], groupSums[b]);
+        });
+      }
+
+      // Sort subgroups…
+      if (sortSubgroups) {
+        subgroupIndex.forEach(function(d, i) {
+          d.source.sort(function(a, b) {
+            return sortSubgroups(matrix[indices[i]][indices[a]], matrix[indices[i]][indices[b]]);
+          });
+          d.target.sort(function(a, b) {
+            return sortSubgroups(matrix[indices[a]][indices[i]], matrix[indices[b]][indices[i]]);
+          });
+        });
+      }
+
+      // TODO: substract padding from chords, instead of adding it to chrord sum
+      // padding = 0;
+
+      // Convert the sum to scaling factor for [0, 2pi].
+      // TODO Allow start and end angle to be specified.
+      // TODO Allow padding to be specified as percentage?
+      k = (2 * π - padding * n) / k;
+
+      // Compute the start and end angle for each group and subgroup.
+      // Note: Opera has a bug reordering object literal properties!
+      x = 0, i = -1; while (++i < n) {
+        var inflow = 0;
+        var outflow = 0;
+
+        var di = groupIndex[i];
+
+		function flowTargets() {
+			// targets
+			x0 = x, j = -1; while (++j < n) {
+			  var dj = subgroupIndex[di].target[j],
+				  v = matrix[indices[dj]][indices[di]],
+				  a0 = x,
+				  d = v * k;
+			  x += d;
+			  subgroups['target' + '-' + di + "-" + dj] = {
+				originalIndex: indices[dj],
+				index: di,
+				subindex: dj,
+				startAngle: a0,
+				dAngle: v * k,
+				value: v
+			  };
+			  inflow += v;
+			}
+		}
+		function flowSources() {
+			// sources
+			x0 = x, j = -1; while (++j < n) {
+			  var dj = subgroupIndex[di].source[j],
+				  v = matrix[indices[di]][indices[dj]],
+				  a0 = x,
+				  d = v * k;
+			  x += d;
+			  subgroups['source' + '-' + di + "-" + dj] = {
+				originalIndex: indices[di],
+				index: di,
+				subindex: dj,
+				startAngle: a0,
+				dAngle: v * k,
+				value: v
+			  };
+			  outflow += v;
+			}
+		}
+		if ( outFlowfirst ) {
+			flowSources();
+			var lastX0 = x0;
+			flowTargets();
+		} else {
+			flowTargets();
+			var lastX0 = x0;
+			flowSources();
+		}
+
+        
+        groups[di] = {
+          id: indices[di],
+          region: region(indices[di]),
+          index: di,
+          startAngle: lastX0,
+          endAngle: x,
+          angle: lastX0 + (x - lastX0) / 2,
+          inflow: inflow,
+          outflow: outflow,
+          value: Math.round((x - lastX0) / k)
+        };
+        x += padding;
+      }
+
+      // Generate chords for each (non-empty) subgroup-subgroup link.
+      i = -1; while (++i < n) {
+        j = i - 1; while (++j < n) {
+          var source = subgroups['source' + '-' + i + "-" + j],
+              target = subgroups['target' + '-' + j + "-" + i];
+          if (i === j) {
+            if (threshold === null || source.value > threshold) {
+              var target = subgroups['target' + '-' + i + "-" + j];
+              chords.push({
+                id: 'source-' + indices[i] + "-" + indices[j],
+                source: {
+                  id: indices[source.index],
+                  region: region(indices[source.index]),
+                  index: source.index,
+                  subindex: source.subindex,
+                  startAngle: source.startAngle,
+                  endAngle: source.startAngle + source.dAngle,
+                  value: source.value
+                },
+                target: {
+                  id: indices[target.index],
+                  region: region(indices[target.index]),
+                  index: target.index,
+                  subindex: target.subindex,
+                  startAngle: target.startAngle,
+                  endAngle: target.startAngle + target.dAngle,
+                  value: target.value
+                }
+              });
+            }
+          } else {
+            if (threshold === null || source.value > threshold) {
+              chords.push({
+                id: 'source-' + indices[i] + "-" + indices[j],
+                source: {
+                  id: indices[source.index],
+                  region: region(indices[source.index]),
+                  index: source.index,
+                  subindex: source.subindex,
+                  startAngle: source.startAngle,
+                  endAngle: source.startAngle + source.dAngle,
+                  value: source.value
+                },
+                target: {
+                  id: indices[target.index],
+                  region: region(indices[target.index]),
+                  index: target.index,
+                  subindex: target.subindex,
+                  startAngle: target.startAngle,
+                  endAngle: target.startAngle + target.dAngle,
+                  value: target.value
+                }
+              });
+            }
+            var source = subgroups['source' + '-' + j + "-" + i],
+                target = subgroups['target' + '-' + i + "-" + j];
+            if (threshold === null || source.value > threshold) {
+              chords.push({
+                id: 'target-' + indices[i] + "-" + indices[j],
+                source: {
+                  id: indices[source.index],
+                  region: region(indices[source.index]),
+                  index: source.index,
+                  subindex: source.subindex,
+                  startAngle: source.startAngle,
+                  endAngle: source.startAngle + source.dAngle,
+                  value: source.value
+                },
+                target: {
+                  id: indices[target.index],
+                  region: region(indices[target.index]),
+                  index: target.index,
+                  subindex: target.subindex,
+                  startAngle: target.startAngle,
+                  endAngle: target.startAngle + target.dAngle,
+                  value: target.value
+                }
+              });
+            }
+          }
+        }
+      }
+
+      if (sortChords) resort();
+    }
+
+    function resort() {
+      chords.sort(function(a, b) {
+        return sortChords(a.source.value, b.source.value);
+      });
+    }
+
+    chord.data = function(x) {
+      if (!arguments.length) return data;
+      data = x;
+      indices = data.regions.slice();
+      n = indices.length;
+      chords = groups = null;
+      return chord;
+    };
+
+    chord.year = function(x) {
+      if (!arguments.length) return year;
+      year = x;
+      chords = groups = null;
+      return chord;
+    };
+
+    chord.countries = function(x) {
+      if (!arguments.length) return countries;
+      countries = x;
+      indices = flowObj.countrymerge(data, countries);
+      n = indices.length;
+      chords = groups = null;
+      return chord;
+    };
+
+	chord.outFlowfirst = function(x) {
+      if (!arguments.length) return outFlowfirst;
+      outFlowfirst = x;
+      chords = groups = null;
+      return chord;
+	}
+
+    chord.padding = function(x) {
+      if (!arguments.length) return padding;
+      padding = x;
+      chords = groups = null;
+      return chord;
+    };
+
+    chord.threshold = function(x) {
+      if (!arguments.length) return threshold;
+      threshold = x;
+      chords = groups = null;
+      return chord;
+    };
+
+    chord.sortGroups = function(x) {
+      if (!arguments.length) return sortGroups;
+      sortGroups = x;
+      chords = groups = null;
+      return chord;
+    };
+
+    chord.sortSubgroups = function(x) {
+      if (!arguments.length) return sortSubgroups;
+      sortSubgroups = x;
+      chords = null;
+      return chord;
+    };
+
+    chord.sortChords = function(x) {
+      if (!arguments.length) return sortChords;
+      sortChords = x;
+      if (chords) resort();
+      return chord;
+    };
+
+    chord.chords = function() {
+      if (!chords) relayout();
+      return chords;
+    };
+
+    chord.groups = function() {
+      if (!groups) relayout();
+      return groups;
+    };
+
+    return chord;
+  };
+
+// }}}
+
+// {{{ CHORD
+
+// Basically a d3.svg.chord, but with
+// * sourcePadding
+// * targetPadding
+  // from d3/svg/chord.js
+
+  // import "../core/functor";
+  var d3_functor = d3.functor;
+  // import "../core/source";
+  function d3_source(d) {
+    return d.source;
+  }
+  // import "../core/target";
+  function d3_target(d) {
+    return d.target;
+  }
+  // import "../math/trigonometry";
+  var π = Math.PI;
+  // import "arc";
+  var d3_svg_arcOffset = -π / 2;
+  function d3_svg_arcStartAngle(d) {
+    return d.startAngle;
+  }
+  function d3_svg_arcEndAngle(d) {
+    return d.endAngle;
+  }
+  // import "svg";
+
+  this.chord = function() {
+    var source = d3_source,
+        target = d3_target,
+        radius = d3_svg_chordRadius,
+        sourcePadding = d3_svg_chordSourcePadding,
+        targetPadding = d3_svg_chordTargetPadding,
+        startAngle = d3_svg_arcStartAngle,
+        endAngle = d3_svg_arcEndAngle;
+
+    // TODO Allow control point to be customized.
+
+    function chord(d, i) {
+      var s = subgroup(this, source, d, i),
+          t = subgroup(this, target, d, i, true);
+
+
+      if (equals(s, t)) {
+        s.a1 = s.a1 - (s.a1 - s.a0) / 2;
+        s.p1 = [s.r * Math.cos(s.a1), s.r * Math.sin(s.a1)];
+
+        t.a0 = t.a0 + (t.a1 - t.a0) / 2;
+        t.p0 = [t.r * Math.cos(t.a0), t.r * Math.sin(t.a0)];
+      }
+
+      var ccp = cubic_control_points(s, t, s.r * 0.618);
+
+      return "M" + s.p0
+        + arc(s.r, s.p1, s.a1 - s.a0)
+        + cubic_curve(ccp.cps1, ccp.cpt0, t.p0)
+        + arc(t.r, t.p1, t.a1 - t.a0)
+        + cubic_curve(ccp.cpt1, ccp.cps0, s.p0)
+        + "Z";
+    }
+
+    function cubic_control_points(s, t, factor) {
+      cps0 = [factor * Math.cos(s.a0), factor * Math.sin(s.a0)];
+      cps1 = [factor * Math.cos(s.a1), factor * Math.sin(s.a1)];
+      cpt0 = [factor * Math.cos(t.a0), factor * Math.sin(t.a0)];
+      cpt1 = [factor * Math.cos(t.a1), factor * Math.sin(t.a1)];
+      return {
+        cps0: cps0, 
+        cps1: cps1, 
+        cpt0: cpt0, 
+        cpt1: cpt1
+      };
+    }
+
+    function subgroup(self, f, d, i, target) {
+      var subgroup = f.call(self, d, i),
+          r = radius.call(self, subgroup, i),
+          a0 = startAngle.call(self, subgroup, i) + d3_svg_arcOffset,
+          a1 = endAngle.call(self, subgroup, i) + d3_svg_arcOffset;
+      
+      if (target) {
+        var d = targetPadding.call(self, subgroup, i) || 0;
+        r = r - d;
+      } else {
+        var d = sourcePadding.call(self, subgroup, i) || 0;
+        r = r - d;
+      }
+
+      return {
+        r: r,
+        a0: a0,
+        a1: a1,
+        p0: [r * Math.cos(a0), r * Math.sin(a0)],
+        p1: [r * Math.cos(a1), r * Math.sin(a1)]
+      };
+    }
+
+    function equals(a, b) {
+      return a.a0 == b.a0 && a.a1 == b.a1;
+    }
+
+    function arc(r, p, a) {
+      return "A" + r + "," + r + " 0 " + +(a > π) + ",1 " + p;
+    }
+
+    function curve(r0, p0, r1, p1) {
+      return "Q 0,0 " + p1;
+    }
+
+    function cubic_curve(cp0, cp1, p1) {
+      return "C " + cp0 + " " + cp1 + " " + p1;
+    }
+
+    chord.radius = function(v) {
+      if (!arguments.length) return radius;
+      radius = d3_functor(v);
+      return chord;
+    };
+
+    // null2
+    chord.sourcePadding = function(v) {
+      if (!arguments.length) return sourcePadding;
+      sourcePadding = d3_functor(v);
+      return chord;
+    };
+    chord.targetPadding = function(v) {
+      if (!arguments.length) return targetPadding;
+      targetPadding = d3_functor(v);
+      return chord;
+    };
+
+    chord.source = function(v) {
+      if (!arguments.length) return source;
+      source = d3_functor(v);
+      return chord;
+    };
+
+    chord.target = function(v) {
+      if (!arguments.length) return target;
+      target = d3_functor(v);
+      return chord;
+    };
+
+    chord.startAngle = function(v) {
+      if (!arguments.length) return startAngle;
+      startAngle = d3_functor(v);
+      return chord;
+    };
+
+    chord.endAngle = function(v) {
+      if (!arguments.length) return endAngle;
+      endAngle = d3_functor(v);
+      return chord;
+    };
+
+    return chord;
+  };
+
+  function d3_svg_chordRadius(d) {
+    return d.radius;
+  }
+  function d3_svg_chordTargetPadding(d) {
+    return d.targetPadding;
+  }
+  function d3_svg_chordSourcePadding(d) {
+    return d.sourcePadding;
+  }
+
+// }}}
+
+// {{{ TIMELINE
+
+// Timeline: year selector
+  this.timeline = function(diagram, config) {
+    var years = Object.keys(diagram.data.matrix).map(function(y) { return parseInt(y); }); 
+
+    config = config || {};
+    config.element = config.element || 'body';
+    config.now = config.now || years[0];
+
+    var form = d3.select(config.element).append('form');
+
+    var year = form.selectAll('.year')
+      .data(years);
+
+    var span = year.enter().append('span')
+      .classed('year', true);
+    span.append('input')
+      .attr({
+        name: 'year',
+        type: 'radio',
+        id: function(d) { return 'year-' + d; },
+        value: function(d) { return d; },
+        checked: function(d) { return d === config.now || null; }
+      })
+      .on('click', function(d) {
+        var y = d;
+        year.selectAll('input').attr('checked', function(d) {
+          return y === d || null;
+        });
+        diagram.draw(d);
+      });
+
+    span.append('label')
+      .attr('for', function(d) { return 'year-' + d; })
+      .text(function(d) { return ""+d+"–" + (d+5); });
+
+    // keyboard control
+    d3.select(document.body).on('keypress', function() {
+      var idx = d3.event.which - 49;
+      var y = years[idx];
+      if (y) {
+        year.selectAll('input').each(function(d) {
+          if (d === y) {
+            d3.select(this).on('click')(d);
+          }
+        });
+      }
+    });
+  };
+
+// }}}
+
+// {{{ CHART
+
+// Initialize diagram
+  var π = Math.PI;
+
+  this.chart = function(data, config) {
     data = data || { regions: [], names: [], matrix: [] };
 
     config = config || {};
@@ -116,7 +707,7 @@
         .outerRadius(config.outerRadius);
 
     // chord diagram
-    var layout = Globalmigration.layout()
+    var layout = this.layout(this)
         .padding(config.arcPadding)
         .threshold(config.layout.threshold)
 		.outFlowfirst(config.layout.outFlowfirst)
@@ -134,7 +725,7 @@
     }
 
     // chord path generator
-    var chordGenerator = Globalmigration.chord()
+    var chordGenerator = this.chord()
         .radius(config.innerRadius)
         .sourcePadding(config.sourcePadding)
         .targetPadding(config.targetPadding);
@@ -658,4 +1249,6 @@
       data: data
     };
   };
-})(window.Globalmigration || (window.Globalmigration = {}));
+};
+
+// }}}
