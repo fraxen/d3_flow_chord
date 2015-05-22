@@ -26,7 +26,7 @@ var chart = new d3FlowChord().chart(MYDATASTRUCTURE, {
 		colors: n2ndata.colors
 	}
 });
-chart.draw(0, null, MYCALLBACK(OPTIONAL));
+chart.draw(YEAR, COUNTRIES, MYCALLBACK(OPTIONAL));
 }
 ```
 See the original repo on how to format the data structure.
